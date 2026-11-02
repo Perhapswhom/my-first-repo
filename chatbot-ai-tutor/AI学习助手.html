@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI学习助手</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232563eb'/><path d='M8 22V13h16v9z' fill='none' stroke='white' stroke-width='2'/><circle cx='11.5' cy='17.5' r='1.4' fill='white'/><circle cx='20.5' cy='17.5' r='1.4' fill='white'/><path d='M16 6v4' stroke='white' stroke-width='2' stroke-linecap='round'/></svg>">
+<style>
+/* ===== 设计 token：暗黑科技蓝 ===== */
+:root{
+  --bg:#0b1220;
+  --panel:#101a2e;
+  --panel-2:#141f36;
+  --bubble-ai:#1c2a44;
+  --bubble-user:#2563eb;
+  --primary:#3b82f6;
+  --accent:#22d3ee;
+  --text:#e5eaf3;
+  --muted:#8fa0b8;
+  --border:rgba(148,163,184,.16);
+  --ok:#34d399;
+  --danger:#f87171;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  min-height:100dvh;
+  background:
+    radial-gradient(1100px 500px at 15% -10%, rgba(59,130,246,.18), transparent 60%),
+    radial-gradient(900px 420px at 90% 110%, rgba(34,211,238,.10), transparent 60%),
+    var(--bg);
+  font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+}
+.app{
+  width:100%;
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  background:linear-gradient(180deg, rgba(16,26,46,.92), rgba(11,18,32,.96));
+  overflow:hidden;
+}
+@media (min-width:768px){
+  body{padding:18px;}
+  .app{
+    width:100%;
+    max-width:860px;
+    height:min(780px, calc(100dvh - 36px));
+    border:1px solid var(--border);
+    border-radius:20px;
+    box-shadow:0 24px 70px rgba(0,0,0,.45);
+  }
+}
+
+/* ===== 顶部导航栏：学员信息 + 状态 + 清空 ===== */
+.header{
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg, rgba(20,31,54,.85), rgba(16,26,46,.55));
+}
+.identity{display:flex;align-items:center;gap:10px;min-width:0;}
+.avatar{
+  flex:none;
+  width:36px;height:36px;
+  border-radius:10px;
+  background:linear-gradient(135deg, var(--primary), var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 14px rgba(59,130,246,.35);
+}
+.avatar svg{width:20px;height:20px;}
+.id-text{min-width:0;}
+.id-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.id-level{font-size:12px;color:var(--muted);margin-top:2px;}
+.status-area{display:flex;align-items:center;gap:14px;}
+.status{
+  display:flex;align-items:center;gap:7px;
+  font-size:12px;color:var(--muted);white-space:nowrap;
+}
+.dot{
+  width:9px;height:9px;border-radius:50%;
+  background:var(--ok);
+  box-shadow:0 0 8px rgba(52,211,153,.8);
+}
+.dot.generating{
+  background:var(--accent);
+  box-shadow:0 0 10px rgba(34,211,238,.9);
+  animation:pulse 1s ease-in-out infinite;
+}
+@keyframes pulse{50%{opacity:.35;}}
+.btn-reset{
+  border:1px solid var(--border);
+  background:rgba(148,163,184,.08);
+  color:var(--text);
+  font-size:12px;
+  padding:7px 11px;
+  border-radius:9px;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.btn-reset:hover{background:rgba(148,163,184,.16);border-color:rgba(148,163,184,.32);}
+.btn-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* ===== 对话区 ===== */
+.chat{
+  flex:1 1 auto;
+  overflow-y:auto;
+  padding:18px 14px 14px;
+  scroll-behavior:smooth;
+}
+.chat::-webkit-scrollbar{width:8px;}
+.chat::-webkit-scrollbar-thumb{background:rgba(148,163,184,.22);border-radius:8px;}
+.msg{
+  display:flex;
+  gap:9px;
+  margin-bottom:14px;
+  max-width:92%;
+  animation:rise .25s ease both;
+}
+@keyframes rise{from{opacity:0;transform:translateY(6px);}}
+.msg.user{flex-direction:row-reverse;margin-left:auto;}
+.bubble{
+  padding:10px 13px;
+  border-radius:14px;
+  font-size:14px;
+  line-height:1.65;
+  word-break:break-word;
+  max-width:100%;
+}
+.msg.ai .bubble{
+  background:var(--bubble-ai);
+  border:1px solid rgba(148,163,184,.12);
+  border-top-left-radius:4px;
+}
+.msg.user .bubble{
+  background:linear-gradient(135deg, var(--bubble-user), #1d4ed8);
+  border-top-right-radius:4px;
+  color:#fff;
+}
+.ai-badge{
+  flex:none;
+  width:30px;height:30px;
+  margin-top:2px;
+  border-radius:9px;
+  background:linear-gradient(135deg, var(--primary), var(--accent));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 10px rgba(59,130,246,.35);
+}
+.ai-badge svg{width:17px;height:17px;}
+.tag{
+  display:block;
+  width:fit-content;
+  font-size:11px;
+  font-weight:600;
+  color:var(--accent);
+  background:rgba(34,211,238,.10);
+  border:1px solid rgba(34,211,238,.25);
+  padding:2px 7px;
+  border-radius:999px;
+  margin-bottom:7px;
+}
+.code-block{
+  background:#0a1120;
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:10px;
+  padding:10px 12px;
+  margin:8px 0 2px;
+  overflow-x:auto;
+  font-family:Consolas,"SF Mono",Menlo,monospace;
+  font-size:12.5px;
+  line-height:1.55;
+  color:#c9d9f0;
+  white-space:pre;
+}
+.msg.user .code-block{color:#e2e8f0;background:rgba(10,17,32,.55);}
+/* 思考中 */
+.thinking{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  color:var(--muted);
+  font-size:13px;
+}
+.thinking .dots{display:inline-flex;gap:3px;margin-left:1px;}
+.thinking .dots span{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--accent);
+  animation:hop 1s ease-in-out infinite;
+}
+.thinking .dots span:nth-child(2){animation-delay:.15s;}
+.thinking .dots span:nth-child(3){animation-delay:.3s;}
+@keyframes hop{0%,100%{transform:translateY(0);opacity:.5;}50%{transform:translateY(-3px);opacity:1;}}
+
+/* ===== 底部输入区 ===== */
+.composer{
+  flex:none;
+  border-top:1px solid var(--border);
+  background:linear-gradient(180deg, rgba(16,26,46,.55), rgba(20,31,54,.9));
+  padding:10px 12px 12px;
+}
+.quick-row{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding-bottom:9px;
+  scrollbar-width:none;
+}
+.quick-row::-webkit-scrollbar{display:none;}
+.quick{
+  flex:none;
+  font-size:12.5px;
+  color:#c9d9f0;
+  background:rgba(59,130,246,.12);
+  border:1px solid rgba(59,130,246,.28);
+  padding:6px 12px;
+  border-radius:999px;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease;
+}
+.quick:hover{background:rgba(59,130,246,.24);border-color:rgba(59,130,246,.5);}
+.quick:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.input-row{display:flex;align-items:flex-end;gap:9px;}
+textarea{
+  flex:1;
+  min-height:44px;
+  max-height:132px;
+  resize:none;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#0d1626;
+  color:var(--text);
+  font-family:inherit;
+  font-size:15px;
+  line-height:1.5;
+  padding:11px 13px;
+  transition:border-color .15s ease;
+}
+textarea::placeholder{color:#5b6b85;}
+textarea:focus{outline:none;border-color:rgba(59,130,246,.6);}
+textarea:disabled{opacity:.55;cursor:not-allowed;}
+.btn-send{
+  flex:none;
+  width:44px;height:44px;
+  border:none;
+  border-radius:12px;
+  background:linear-gradient(135deg, var(--primary), var(--accent));
+  color:#fff;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:filter .15s ease,transform .1s ease;
+  box-shadow:0 4px 14px rgba(59,130,246,.4);
+}
+.btn-send:hover{filter:brightness(1.12);}
+.btn-send:active{transform:scale(.95);}
+.btn-send:disabled{opacity:.5;cursor:not-allowed;filter:none;box-shadow:none;}
+.btn-send:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.btn-send svg{width:19px;height:19px;}
+.hint{
+  margin-top:8px;
+  font-size:11px;
+  color:#5b6b85;
+  text-align:center;
+}
+@media (prefers-reduced-motion:reduce){
+  .chat{scroll-behavior:auto;}
+  .dot.generating,.thinking .dots span{animation:none;}
+  .msg{animation:none;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ===== 顶部导航栏 ===== -->
+  <header class="header">
+    <div class="identity">
+      <div class="avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10h6M9 14h4"/></svg>
+      </div>
+      <div class="id-text">
+        <div class="id-name">学员：AI 探索者</div>
+        <div class="id-level">当前等级：入门第 1 阶段</div>
+      </div>
+    </div>
+    <div class="status-area">
+      <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">在线 / 模拟就绪</span></div>
+      <button class="btn-reset" id="btnReset" type="button">清空对话 / 重新开始</button>
+    </div>
+  </header>
+
+  <!-- ===== 对话区 ===== -->
+  <main class="chat" id="chat" aria-live="polite"></main>
+
+  <!-- ===== 底部输入区 ===== -->
+  <footer class="composer">
+    <div class="quick-row" id="quickRow" aria-label="快捷提问"></div>
+    <div class="input-row">
+      <textarea id="input" rows="1" placeholder="输入你的问题…（Enter 发送，Shift + Enter 换行）" aria-label="输入消息"></textarea>
+      <button class="btn-send" id="btnSend" type="button" aria-label="发送">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12 19 4.5 14.6 19l-3-5.6z"/><path d="M11.6 13.4 19 4.5"/></svg>
+      </button>
+    </div>
+    <div class="hint">演示版：预设问答模拟对话，未接入真实模型</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ========== 模块 1 · 预设问答库（Mock Data） ========== */
+  var KB = [
+    {
+      keywords: ["反向传播","backpropagation","神经网络怎么学"],
+      reply: "反向传播是神经网络用来\"改错\"的方法。\n\n你可以把它想成一场接力考试：网络算出答案后，把\"错在哪\"从最后一层往回传，每一层都根据错误调整自己的权重，就像每个人拿到批改后的卷子，知道自己哪里该改。\n\n简化版伪代码：\n```\n1. 前向传播：算出一个预测值\n2. 计算损失：预测值和正确答案差多远\n3. 反向传播：把误差沿网络逐层往回传\n4. 更新权重：每层按误差大小微调参数\n```\n这个过程反复执行，网络就越来越准。"
+    },
+    {
+      keywords: ["机器学习","machine learning","ML"],
+      reply: "机器学习 = 让程序自己从数据里找规律，而不是靠人一条条写规则。\n\n打个比方：教小孩认猫，你不用告诉他\"猫有胡须\"这类规则，只要给他看几百张猫的照片，他看多了自然就会认。机器学习就是这个过程——喂给程序大量例子，它自己总结出规律。\n\n常见步骤：收集数据 → 清洗数据 → 选模型 → 训练 → 评估 → 部署。"
+    },
+    {
+      keywords: ["深度学习","deep learning","深度"],
+      reply: "深度学习是机器学习的一个子类，核心是使用\"多层神经网络\"来学习。\n\n比喻：机器学习像用\"简易地图\"找路（靠人工设计特征）；深度学习像自己\"钻透一层层地图\"（每一层网络自动提取一层特征，从线条到轮廓再到整体）。\n\n它特别擅长图像、语音、文本这类复杂数据，也是 ChatGPT 这类大模型的技术底座。"
+    },
+    {
+      keywords: ["机器学习与深度学习","ML和DL","机器学习和深度学习的区别"],
+      reply: "一句话区别：\n\n机器学习：人先帮程序挑好特征，程序再学规律。\n深度学习：程序自己从原始数据里一层层提取特征。\n\n| 对比 | 机器学习 | 深度学习 |\n|---|---|---|\n| 需要特征工程 | 通常需要 | 基本不需要 |\n| 数据量 | 较少也行 | 通常需要大量数据 |\n| 算力要求 | 低 | 高 |\n| 擅长领域 | 表格数据等 | 图像、语音、文本 |\n\n深度学习是机器学习的一种实现方式，两者不是对立关系。"
+    },
+    {
+      keywords: ["prompt","提示词","提示词工程"],
+      reply: "提示词（Prompt）就是你给 AI 的\"工作说明书\"。AI 回答得好不好，很大程度取决于你交代得清不清楚。\n\n四个实用技巧：\n1. 给角色：\"你是一名资深 Python 老师\"\n2. 给背景：\"我要给完全不懂编程的人讲\"\n3. 给例子：先给一个示例答案\n4. 给格式：\"用三步说明，每步不超过两行\"\n\n记住：具体、具体、再具体。含糊的提问只能得到含糊的回答。"
+    },
+    {
+      keywords: ["微调","fine-tune","fine tuning","微调模型"],
+      reply: "微调（Fine-tuning）= 在别人训练好的大模型基础上，用你自己的少量数据再练一遍，让它更懂你的领域。\n\n比喻：通用大模型像一个什么都会一点的\"全科医生\"；微调就是让他进修\"儿科专科\"，之后儿科问题回答得更专业。\n\n步骤：准备领域数据 → 选择预训练模型 → 用你的数据继续训练 → 评估效果。相比从零训练，微调省时省力。"
+    },
+    {
+      keywords: ["python","调用","示例","代码"],
+      reply: "用 Python 调用大模型接口，目前很多服务都用 OpenAI 兼容格式，示例：\n\n```python\nfrom openai import OpenAI\n\nclient = OpenAI()  # 在环境变量里配好 API Key\n\nresp = client.chat.completions.create(\n    model=\"gpt-4o\",\n    messages=[\n        {\"role\": \"system\", \"content\": \"你是编程助教\"},\n        {\"role\": \"user\", \"content\": \"用一句话解释什么是 API\"}\n    ]\n)\n\nprint(resp.choices[0].message.content)\n```\n\n要点：API Key 要放在环境变量里，不要写死在代码中。"
+    },
+    {
+      keywords: ["大模型","大语言模型","llm","gpt","chatgpt"],
+      reply: "大语言模型（LLM）可以理解成一个超大的\"词语接龙高手\"：它根据你前面说的话，预测最可能接下去的词语。\n\n它为什么聪明？因为在训练阶段读了海量文本（书、网页、代码），学会了语言的规律和大量知识。\n\n重要提醒：它会\"一本正经地胡说八道\"（幻觉），所以关键信息一定要自己核实。"
+    },
+    {
+      keywords: ["训练","数据集","data"],
+      reply: "训练 = 给模型喂大量例子，让它一遍遍修正自己的参数，直到预测越来越准。\n\n比喻：像运动员反复练习投篮——每次投偏了就调整姿势，练得越多越准。\n\n好数据集的三个要求：量大、多样、质量高。数据质量差，模型能力上限就低——\"垃圾进，垃圾出\"。"
+    },
+    {
+      keywords: ["梯度下降","optimizer","优化","损失函数"],
+      reply: "梯度下降是训练模型时最常用的\"找最优解\"方法。\n\n比喻：你在山里起雾时下山——每一步都朝\"坡度最陡的下坡方向\"走一小步，走着走着就到了山脚（误差最小的地方）。\n\n两个关键参数：\n学习率：步子大小。太大容易走过头，太小走得慢。\n迭代次数：走多少步。\n\n\"梯度\"就是当前这步最陡的下坡方向。"
+    },
+    {
+      keywords: ["rag","检索增强生成","知识库","RAG"],
+      reply: "RAG（检索增强生成）= 先查资料，再回答。\n\n比喻：一个被限制\"只能在图书馆书架里找答案\"的图书管理员——你问\"某本书在哪\"，他先查馆藏系统，再照着实情回答，不会自己编。\n\n流程：\n```\n用户提问\n   ↓\n检索知识库（向量搜索相关文档）\n   ↓\n把检索到的内容拼进提示词\n   ↓\n模型基于资料生成回答\n```\n\n它解决了大模型\"乱编\"和\"知识过时\"的问题，是专业聊天机器人的核心技术。"
+    },
+    {
+      keywords: ["聊天机器人","chatbot","怎么开发","开发机器人"],
+      reply: "开发一个专业聊天机器人，建议按四步走：\n\n1. 定义任务：帮谁解决什么问题（越具体越好）\n2. 选模型：确定用什么大模型\n3. 给知识：用 RAG 接入你的资料库\n4. 测试迭代：多问坏问题，记录失败，不断改进\n\n记住：目标不是\"能说的最多\"，而是\"把本职工作做好\"——先做出能跑的最小版本（v0），再慢慢升级。"
+    },
+    {
+      keywords: ["入门","学习路线","怎么学","从哪里开始","新手"],
+      reply: "零基础入门 AI 的学习路线（每个阶段都能用）：\n\n1. 基础概念：机器学习、神经网络是什么（约 1-2 周）\n2. Python 编程：能写会跑小脚本（约 4-6 周）\n3. 机器学习实战：用现成工具跑通一个项目\n4. 深度学习：从图像或文本任务入手\n5. 动手做项目：做一个自己的聊天机器人\n\n建议：边学边做，学一点用一点，比\"学完再动手\"有效得多。"
+    }
+  ];
+
+  var DEFAULT_REPLY = "这个问题我暂时没有预设答案。\n\n你可以换个问法试试，比如：\n- 问\"什么是反向传播\"\n- 问\"机器学习与深度学习的区别\"\n- 让我\"写一个 Python 调用示例\"\n- 问\"什么是 RAG\"\n\n把问题问得越具体，我越能帮到你。";
+
+  var WELCOME = [
+    "你好，我是你的 AI 学习导师。我会用大白话给你讲 AI 和编程知识，讲到重点时也会给你\"能解决什么实际问题\"的提示。",
+    "可以从下方的快捷问题开始，也可以直接输入你想问的话题，比如\"什么是 RAG\"或\"写一个 Python 调用示例\"。"
+  ];
+
+  var QUICK_PROMPTS = ["什么是反向传播？", "机器学习与深度学习区别", "写一个 Python 调用示例"];
+
+  /* ========== DOM 引用 ========== */
+  var chatEl = document.getElementById("chat");
+  var inputEl = document.getElementById("input");
+  var btnSend = document.getElementById("btnSend");
+  var btnReset = document.getElementById("btnReset");
+  var quickRow = document.getElementById("quickRow");
+  var statusDot = document.getElementById("statusDot");
+  var statusText = document.getElementById("statusText");
+
+  /* ========== 状态 ========== */
+  var state = {
+    thinking: false,
+    status: "ready"
+  };
+
+  /* ========== 工具函数 ========== */
+  function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  /* 把回复文本格式化：转义 → 换行 → ``` 代码块 → 简单表格 */
+  function formatReply(text) {
+    var esc = escapeHtml(text);
+    var parts = esc.split("```");
+    var html = "";
+    for (var i = 0; i < parts.length; i++) {
+      if (i % 2 === 1) {
+        html += '<div class="code-block">' + parts[i].replace(/\n/g, "<br>") + "</div>";
+      } else {
+        html += parts[i].replace(/\n/g, "<br>");
+      }
+    }
+    /* 简单表格：行以 | 开头，转换为原生表格样式（过滤纯分隔行） */
+    html = html.replace(/(<br>)?\|[^<]*\|(<br>)?/g, function(m){
+      var rows = m.split(/<br>/).filter(function(r){
+        var t = r.trim();
+        return t.indexOf("|") === 0 && t.replace(/[\||\-|\s]/g, "").length > 0;
+      });
+      var trs = rows.map(function(r, idx){
+        var cells = r.replace(/^\||\|$/g, "").split("|").map(function(c){ return c.trim(); });
+        var tag = idx === 0 ? "th" : "td";
+        return "<tr>" + cells.map(function(c){ return "<" + tag + ">" + c + "</" + tag + ">"; }).join("") + "</tr>";
+      }).join("");
+      return '<table class="mini-table" style="border-collapse:collapse;margin:8px 0;width:100%;font-size:13px;"><tbody>' + trs + "</tbody></table>";
+    });
+    return html;
+  }
+
+  function scrollToBottom() {
+    chatEl.scrollTo({ top: chatEl.scrollHeight, behavior: "smooth" });
+  }
+
+  function setStatus(s) {
+    state.status = s;
+    statusDot.classList.toggle("generating", s === "generating");
+    statusText.textContent = s === "generating" ? "正在生成" : "在线 / 模拟就绪";
+  }
+
+  function setBusy(busy) {
+    state.thinking = busy;
+    inputEl.disabled = busy;
+    btnSend.disabled = busy;
+  }
+
+  /* ========== 消息渲染 ========== */
+  function addMessage(role, html) {
+    var wrap = document.createElement("div");
+    wrap.className = "msg " + role;
+    if (role === "ai") {
+      var badge = document.createElement("div");
+      badge.className = "ai-badge";
+      badge.setAttribute("aria-hidden", "true");
+      badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10h6M9 14h4"/></svg>';
+      wrap.appendChild(badge);
+      var bubble = document.createElement("div");
+      bubble.className = "bubble";
+      var tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = "AI 学习导师";
+      bubble.appendChild(tag);
+      var body = document.createElement("span");
+      body.innerHTML = html;
+      bubble.appendChild(body);
+      wrap.appendChild(bubble);
+    } else {
+      var bubble2 = document.createElement("div");
+      bubble2.className = "bubble";
+      bubble2.innerHTML = html;
+      wrap.appendChild(bubble2);
+    }
+    chatEl.appendChild(wrap);
+    scrollToBottom();
+  }
+
+  function addWelcome() {
+    addMessage("ai", WELCOME[0]);
+    addMessage("ai", WELCOME[1]);
+  }
+
+  /* ========== 关键词匹配（模块 1） ========== */
+  function matchReply(text) {
+    var best = null;
+    var bestScore = 0;
+    var lower = text.toLowerCase();
+    for (var i = 0; i < KB.length; i++) {
+      var score = 0;
+      for (var j = 0; j < KB[i].keywords.length; j++) {
+        var kw = KB[i].keywords[j].toLowerCase();
+        if (lower.indexOf(kw) !== -1) score += kw.length;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = KB[i];
+      }
+    }
+    return best ? best.reply : DEFAULT_REPLY;
+  }
+
+  /* ========== 发送逻辑（模块 2 + 模块 4 思考动画） ========== */
+  function send(text) {
+    var t = (text || "").trim();
+    if (!t || state.thinking) return;
+    addMessage("user", escapeHtml(t));
+    setBusy(true);
+    setStatus("generating");
+
+    /* AI 思考气泡：先展示 1~2 秒三个跳动圆点 */
+    var thinkWrap = document.createElement("div");
+    thinkWrap.className = "msg ai";
+    thinkWrap.innerHTML = '<div class="ai-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10h6M9 14h4"/></svg></div><div class="bubble"><span class="thinking">正在思考<span class="dots"><span></span><span></span><span></span></span></span></div>';
+    chatEl.appendChild(thinkWrap);
+    scrollToBottom();
+
+    var reply = matchReply(t);
+    var delay = 1200 + Math.random() * 600; /* 1.2 ~ 1.8 秒 */
+    setTimeout(function () {
+      chatEl.removeChild(thinkWrap);
+      addMessage("ai", formatReply(reply));
+      setBusy(false);
+      setStatus("ready");
+    }, delay);
+  }
+
+  /* ========== 输入框自动扩展行高（模块 2） ========== */
+  function autosize() {
+    inputEl.style.height = "auto";
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 132) + "px";
+  }
+  inputEl.addEventListener("input", autosize);
+
+  /* Enter 发送、Shift + Enter 换行 */
+  inputEl.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send(inputEl.value);
+      inputEl.value = "";
+      inputEl.style.height = "auto";
+    }
+  });
+
+  /* ========== 快捷提问（模块 2） ========== */
+  QUICK_PROMPTS.forEach(function (label) {
+    var chip = document.createElement("button");
+    chip.className = "quick";
+    chip.type = "button";
+    chip.textContent = label;
+    chip.addEventListener("click", function () {
+      inputEl.value = label;
+      autosize();
+      send(label);
+      inputEl.value = "";
+      inputEl.style.height = "auto";
+    });
+    quickRow.appendChild(chip);
+  });
+
+  /* ========== 按钮绑定 ========== */
+  btnSend.addEventListener("click", function () {
+    send(inputEl.value);
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+  });
+
+  /* 清空对话 / 重新开始（模块 5） */
+  btnReset.addEventListener("click", function () {
+    chatEl.innerHTML = "";
+    addWelcome();
+    inputEl.value = "";
+    inputEl.style.height = "auto";
+    setBusy(false);
+    setStatus("ready");
+  });
+
+  /* ========== 初始化（模块 4：加载后自动欢迎语） ========== */
+  addWelcome();
+  inputEl.focus();
+})();
+</script>
+</body>
+</html>
